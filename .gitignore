@@ -35,3 +35,7 @@ yarn-error.log
 /coverage
 /libpeerconnection.log
 testem.l
+
+# Environmental Variables
+
+.env
