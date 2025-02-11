@@ -1,7 +1,8 @@
 const { db } = require('../config/db');
+const ProductVariant = require('./productVariant.model');
 
 const Product = {
-  getAll: (filters) => {
+  getAll: async (filters) => {
     let query = db('products')
       .select(
         'products.*',
@@ -36,14 +37,28 @@ const Product = {
     if (filters.size_id) query.where('product_sizes.size_id', filters.size_id);
     if (filters.color_id) query.where('product_colors.color_id', filters.color_id);
 
-    return query;
+    const products = await query;
+
+    // Fetch variants for each product
+    for (let product of products) {
+      product.variants = await ProductVariant.getAllByProductId(product.id);
+    }
+
+    return products;
   },
 
-  getById: (id) =>
-    db('products')
+  getById: async (id) => {
+    const product = await db('products')
       .select('*')
       .where({ id })
-      .first(),
+      .first();
+
+    if (product) {
+      product.variants = await ProductVariant.getAllByProductId(id);
+    }
+
+    return product;
+  },
 
   create: async (data) => {
     const [product] = await db('products').insert(data).returning('*');

@@ -12,6 +12,7 @@ exports.up = function (knex) {
     table.specificType("subcategory_ids", "UUID[]"); // Array of subcategory IDs
     table.specificType("size_ids", "UUID[]"); // Array of size IDs
     table.specificType("color_ids", "UUID[]"); // Array of color IDs
+    table.specificType("variant_ids", "UUID[]"); 
 
     // Product visibility & sales stats
     table.integer("views").defaultTo(0);
@@ -27,9 +28,8 @@ exports.up = function (knex) {
     table.timestamp("discount_start_date").nullable();
     table.timestamp("discount_end_date").nullable();
     table.boolean("is_discounted").defaultTo(false);
-
     // Product images
-    table.specificType("images", "TEXT[]"); // Array of image URLs
+    table.specificType("images", "UUID[]"); // Array of image URLs
 
     // Timestamps
     table.timestamp("created_at").defaultTo(knex.fn.now());

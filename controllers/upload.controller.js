@@ -5,37 +5,30 @@ const fs = require('fs');
 // Upload File
 exports.uploadFile = async (req, res) => {
     try {
-        console.log('Request File:', req.file); // Log the uploaded file
+        console.log('Request File:', req.file);
         if (!req.file) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
 
         const { originalname, filename, mimetype } = req.file;
-        console.log('File Details:', { originalname, filename, mimetype }); // Log file details
+        console.log('File Details:', { originalname, filename, mimetype });
 
-        // Determine the file type folder
-        let folder = 'documents'; // Default folder
-        if (mimetype.startsWith('image/')) {
-            folder = 'images';
-        } else if (mimetype.startsWith('video/')) {
-            folder = 'videos';
-        } else if (mimetype.startsWith('audio/')) {
-            folder = 'audios';
-        }
+        let folder = 'documents';
+        if (mimetype.startsWith('image/')) folder = 'images';
+        else if (mimetype.startsWith('video/')) folder = 'videos';
+        else if (mimetype.startsWith('audio/')) folder = 'audios';
 
-        // Construct the file URL
         const fileUrl = `/uploads/${folder}/${filename}`;
 
-        // Insert file details into the database
         const [upload] = await db('uploads')
             .insert({
                 name: originalname,
-                file: fileUrl, // Store the file URL
-                type: mimetype.substring(0, 50), // Truncate mimetype if necessary
+                file: fileUrl,
+                type: mimetype.substring(0, 50),
             })
             .returning('*');
 
-        console.log('Upload Result:', upload); // Log the database insertion result
+        console.log('Upload Result:', upload);
         res.status(201).json({ message: 'File uploaded successfully', upload });
     } catch (error) {
         console.error('Upload Error:', error);
@@ -54,6 +47,34 @@ exports.getUploads = async (req, res) => {
     }
 };
 
+// Update an upload
+exports.updateUpload = async (req, res) => {
+    try {
+        const { upload_id } = req.params;
+        const { name } = req.body;
+
+        // Ensure at least one field is provided for update
+        if (!name || name.trim() === "") {
+            return res.status(400).json({ message: 'Invalid update data: name is required' });
+        }
+
+        const [updatedUpload] = await db('uploads')
+            .where({ id: upload_id })
+            .update({ name })
+            .returning('*');
+
+        if (!updatedUpload) {
+            return res.status(404).json({ message: 'Upload not found' });
+        }
+
+        res.json({ message: 'Upload updated successfully', upload: updatedUpload });
+    } catch (error) {
+        console.error('Update Upload Error:', error);
+        res.status(500).json({ message: 'Server error while updating upload', error: error.message });
+    }
+};
+
+
 // Delete an upload
 exports.deleteUpload = async (req, res) => {
     try {
@@ -65,7 +86,6 @@ exports.deleteUpload = async (req, res) => {
             return res.status(404).json({ message: 'Upload not found' });
         }
 
-        // Construct the file path and delete the file
         const filePath = path.join(__dirname, '..', upload.file);
         if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
