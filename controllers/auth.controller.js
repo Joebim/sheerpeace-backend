@@ -1,6 +1,10 @@
-const { createUser, getUserByEmail } = require("../models/users.model");
+const { db } = require("../config/db");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+
+const getUserByEmail = async (email) => {
+    return db("users").where({ email }).first();
+};
 
 const register = async (req, res) => {
     try {
@@ -13,8 +17,18 @@ const register = async (req, res) => {
         // Prevent normal users from signing up as admin
         const role = user_type === "admin" ? "user" : user_type;
 
-        // Create user
-        const newUser = await createUser({ name, email, password, user_type: role });
+        // Hash the password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Insert new user into the database
+        const [newUser] = await db("users")
+            .insert({
+                name,
+                email,
+                password: hashedPassword,
+                user_type: role,
+            })
+            .returning(["id", "name", "email", "user_type", "created_at"]);
 
         res.status(201).json({ message: "User registered successfully", user: newUser });
     } catch (error) {
