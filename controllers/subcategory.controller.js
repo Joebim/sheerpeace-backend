@@ -57,3 +57,17 @@ exports.deleteSubcategory = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// Create multiple subcategories
+exports.createMultipleSubcategories = async (req, res) => {
+  try {
+    const subcategories = req.body;
+    if (!Array.isArray(subcategories) || subcategories.length === 0) {
+      return res.status(400).json({ message: 'Invalid input. Expected an array of subcategories.' });
+    }
+    const newSubcategories = await Subcategory.createMultiple(subcategories);
+    res.status(201).json(newSubcategories);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

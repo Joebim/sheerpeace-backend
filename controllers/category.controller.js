@@ -84,3 +84,17 @@ exports.deleteCategory = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// Create multiple categories
+exports.createMultipleCategories = async (req, res) => {
+  try {
+    const categories = req.body;
+    if (!Array.isArray(categories) || categories.length === 0) {
+      return res.status(400).json({ message: 'Invalid input. Expected an array of categories.' });
+    }
+    const newCategories = await Category.createMultiple(categories);
+    res.status(201).json(newCategories);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

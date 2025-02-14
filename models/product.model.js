@@ -1,79 +1,83 @@
 const { db } = require('../config/db');
-const ProductVariant = require('./productVariant.model');
+const { v4: uuidv4 } = require('uuid');
 
 const Product = {
-  getAll: async (filters) => {
-    let query = db('products')
-      .select(
-        'products.*',
-        'categories.name as category',
-        'subcategories.name as subCategory',
-        'brands.name as brand',
-        'collections.name as collection',
-        db.raw('json_agg(DISTINCT jsonb_build_object(\'name\', colors.name, \'hex\', colors.hex)) AS colors'),
-        db.raw('json_agg(DISTINCT sizes.name) AS sizes'),
-        db.raw('json_agg(DISTINCT materials.name) AS materials'),
-        db.raw('json_agg(DISTINCT shipping_options.name) AS shippingOptions'),
-        db.raw('json_agg(DISTINCT uploads.url) AS images')
-      )
-      .leftJoin('categories', 'products.category_id', 'categories.id')
-      .leftJoin('subcategories', 'products.sub_category_id', 'subcategories.id')
-      .leftJoin('brands', 'products.brand_id', 'brands.id')
-      .leftJoin('collections', 'products.collection_id', 'collections.id')
-      .leftJoin('product_colors', 'products.id', 'product_colors.product_id')
-      .leftJoin('colors', 'product_colors.color_id', 'colors.id')
-      .leftJoin('product_sizes', 'products.id', 'product_sizes.product_id')
-      .leftJoin('sizes', 'product_sizes.size_id', 'sizes.id')
-      .leftJoin('product_materials', 'products.id', 'product_materials.product_id')
-      .leftJoin('materials', 'product_materials.material_id', 'materials.id')
-      .leftJoin('product_shipping_options', 'products.id', 'product_shipping_options.product_id')
-      .leftJoin('shipping_options', 'product_shipping_options.shipping_option_id', 'shipping_options.id')
-      .leftJoin('product_images', 'products.id', 'product_images.product_id')
-      .leftJoin('uploads', 'product_images.upload_id', 'uploads.id')
-      .groupBy('products.id', 'categories.name', 'subcategories.name', 'brands.name', 'collections.name');
-
-    if (filters.category_id) query.where('products.category_id', filters.category_id);
-    if (filters.brand_id) query.where('products.brand_id', filters.brand_id);
-    if (filters.size_id) query.where('product_sizes.size_id', filters.size_id);
-    if (filters.color_id) query.where('product_colors.color_id', filters.color_id);
-
-    const products = await query;
-
-    // Fetch variants for each product
-    for (let product of products) {
-      product.variants = await ProductVariant.getAllByProductId(product.id);
-    }
-
-    return products;
+  // Get all products with populated details
+  getAll: async () => {
+    const products = await db('products').select('*');
+    return await Promise.all(
+      products.map(async (product) => {
+        const brand = await db('brands').where({ id: product.brand_id }).first();
+        const categories = await db('categories').whereIn('id', product.category_ids).select('*');
+        const subcategories = await db('subcategories').whereIn('id', product.subcategory_ids).select('*');
+        const sizes = await db('sizes').whereIn('id', product.size_ids).select('*');
+        const colors = await db('colors').whereIn('id', product.color_ids).select('*');
+        const variants = product.variant_ids && product.variant_ids.length
+        ? await db('product_variants').whereIn('id', JSON.parse(product.variant_ids)).select('*')
+        : [];
+        const images = await db('uploads').whereIn('id', product.images).select('*');
+        
+        return {
+          ...product,
+          brand,
+          categories,
+          subcategories,
+          sizes,
+          colors,
+          variants,
+          images: images.map(img => img.file),
+        };
+      })
+    );
   },
 
+  // Get product by ID with populated details
   getById: async (id) => {
-    const product = await db('products')
-      .select('*')
-      .where({ id })
-      .first();
-
-    if (product) {
-      product.variants = await ProductVariant.getAllByProductId(id);
-    }
-
-    return product;
+    const product = await db('products').where({ id }).first();
+    if (!product) return null;
+    
+    const brand = await db('brands').where({ id: product.brand_id }).first();
+    const categories = await db('categories').whereIn('id', product.category_ids).select('*');
+    const subcategories = await db('subcategories').whereIn('id', product.subcategory_ids).select('*');
+    const sizes = await db('sizes').whereIn('id', product.size_ids).select('*');
+    const colors = await db('colors').whereIn('id', product.color_ids).select('*');
+    const variants = await db('variant_ids').whereIn('id', product.variant_ids).select('*');
+    const images = await db('uploads').whereIn('id', product.images).select('*');
+    
+    return {
+      ...product,
+      brand,
+      categories,
+      subcategories,
+      sizes,
+      colors,
+      variants,
+      images: images.map(img => img.file),
+    };
   },
 
+  // Create a new product
   create: async (data) => {
-    const [product] = await db('products').insert(data).returning('*');
-    return product;
+    const newProduct = { id: uuidv4(), ...data };
+    const insertedProduct = await db('products').insert(newProduct).returning('*');
+    return insertedProduct[0];
   },
 
+  // Create multiple products
+  createMultiple: async (products) => {
+    const productsWithIds = products.map(product => ({ id: uuidv4(), ...product }));
+    return await db('products').insert(productsWithIds).returning('*');
+  },
+
+  // Update product
   update: async (id, data) => {
-    const [product] = await db('products').where({ id }).update(data).returning('*');
-    return product;
+    return await db('products').where({ id }).update(data).returning('*');
   },
 
+  // Delete product
   delete: async (id) => {
-    const deleted = await db('products').where({ id }).del().returning('*');
-    return deleted;
-  },
+    return await db('products').where({ id }).del();
+  }
 };
 
 module.exports = Product;

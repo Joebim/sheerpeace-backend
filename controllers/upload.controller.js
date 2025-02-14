@@ -36,6 +36,24 @@ exports.uploadFile = async (req, res) => {
     }
 };
 
+// Get one upload by ID
+exports.getUploadById = async (req, res) => {
+    try {
+        const { upload_id } = req.params;
+
+        const upload = await db('uploads').where({ id: upload_id }).first();
+
+        if (!upload) {
+            return res.status(404).json({ message: 'Upload not found' });
+        }
+
+        res.json(upload);
+    } catch (error) {
+        console.error('Fetch Upload Error:', error);
+        res.status(500).json({ message: 'Server error while fetching upload', error: error.message });
+    }
+};
+
 // Get all uploads
 exports.getUploads = async (req, res) => {
     try {

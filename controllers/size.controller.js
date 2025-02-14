@@ -66,3 +66,17 @@ exports.deleteSize = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// Create multiple sizes
+exports.createMultipleSizes = async (req, res) => {
+  try {
+    const sizes = req.body;
+    if (!Array.isArray(sizes) || sizes.length === 0) {
+      return res.status(400).json({ message: 'Invalid input. Expected an array of sizes.' });
+    }
+    const newSizes = await Size.createMultiple(sizes);
+    res.status(201).json(newSizes);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

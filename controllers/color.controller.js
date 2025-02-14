@@ -70,3 +70,16 @@ exports.deleteColor = async (req, res) => {
   }
 };
 
+// Create multiple colors
+exports.createMultipleColors = async (req, res) => {
+  try {
+    const colors = req.body;
+    if (!Array.isArray(colors) || colors.length === 0) {
+      return res.status(400).json({ message: 'Invalid input. Expected an array of colors.' });
+    }
+    const newColors = await Color.createMultiple(colors);
+    res.status(201).json(newColors);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
