@@ -109,3 +109,18 @@ exports.deleteBrand = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
+// Create multiple brands
+exports.createMultipleBrands = async (req, res) => {
+  try {
+    const brands = req.body;
+    if (!Array.isArray(brands) || brands.length === 0) {
+      return res.status(400).json({ message: 'Invalid input. Expected an array of brands.' });
+    }
+    const newBrands = await Brand.createMultiple(brands);
+    res.status(201).json(newBrands);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

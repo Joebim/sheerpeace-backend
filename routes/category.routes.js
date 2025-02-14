@@ -5,6 +5,7 @@ const {
   createCategory,
   updateCategory,
   deleteCategory,
+  createMultipleCategories,
 } = require('../controllers/category.controller');
 
 const router = express.Router();
@@ -13,6 +14,7 @@ const router = express.Router();
 router.get('/', getAllCategories);
 router.get('/:id', getCategoryById);
 router.post('/', createCategory);
+router.post('/multiple', createMultipleCategories);
 router.put('/:id', updateCategory);
 router.delete('/:id', deleteCategory);
 

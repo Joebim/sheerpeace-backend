@@ -3,6 +3,7 @@ const {
   getAllProducts,
   getProductById,
   createProduct,
+  createMultiple,
   updateProduct,
   deleteProduct,
 } = require('../controllers/product.controller');
@@ -12,8 +13,9 @@ const router = express.Router();
 
 router.get('/', getAllProducts);
 router.get('/:product_id', getProductById);
-router.post('/create', authMiddleware, adminMiddleware, createProduct);
-router.put('/update/:product_id', authMiddleware, adminMiddleware, updateProduct);
-router.delete('/delete/:product_id', authMiddleware, adminMiddleware, deleteProduct);
+router.post('/', authMiddleware, adminMiddleware, createProduct);
+router.post('/multiple', authMiddleware, adminMiddleware, createMultiple);
+router.put('/:product_id', authMiddleware, adminMiddleware, updateProduct);
+router.delete('/:product_id', authMiddleware, adminMiddleware, deleteProduct);
 
 module.exports = router;

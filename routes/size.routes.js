@@ -3,6 +3,7 @@ const {
   getAllSizes,
   getSizeById,
   createSize,
+  createMultipleSizes,
   updateSize,
   deleteSize,
 } = require('../controllers/size.controller');
@@ -16,6 +17,7 @@ router.get('/:id', getSizeById);
 
 // Create a new size
 router.post('/', createSize);
+router.post('/multiple', createMultipleSizes);
 
 // Update an existing size
 router.put('/:id', updateSize);
