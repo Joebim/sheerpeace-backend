@@ -7,6 +7,8 @@ RUN npm install
 
 COPY . .
 
+COPY db-backups/backup.dump /docker-entrypoint-initdb.d/backup.dump
+
 EXPOSE 5000
 
 CMD ["npm", "run", "dev"]
