@@ -7,8 +7,9 @@ RUN npm install
 
 COPY . .
 
-# Copy the PostgreSQL backup file to the container
 COPY db-backups/postgresql_sheerpeace_backup.tar /docker-entrypoint-initdb.d/postgresql_sheerpeace_backup.tar
+
+COPY db-backups/postgres_roles.sql /docker-entrypoint-initdb.d/postgres_roles.sql
 
 EXPOSE 5000
 
