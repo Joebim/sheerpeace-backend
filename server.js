@@ -54,5 +54,6 @@ app.use('/api/messages', messageRouter);
 
 
 app.listen(process.env.PORT, () => {
+    `Welcome to Sheerpeace Api`
     console.log(`running on port ${process.env.PORT}`);
 });
