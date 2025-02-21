@@ -1,4 +1,4 @@
-const Product = require('../models/product.model');
+const Product = require("../models/product.model");
 
 const getAllProducts = async (req, res) => {
   try {
@@ -7,7 +7,7 @@ const getAllProducts = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: `Failed to fetch products ${error}` });
   }
-}
+};
 
 // Get product by ID
 const getProductById = async (req, res) => {
@@ -20,7 +20,7 @@ const getProductById = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: `Failed to fetch product ${error}` });
   }
-}
+};
 
 // Create a new product
 const createProduct = async (req, res) => {
@@ -30,7 +30,7 @@ const createProduct = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: "Failed to create product" });
   }
-}
+};
 
 // Create multiple products
 const createMultiple = async (req, res) => {
@@ -40,7 +40,7 @@ const createMultiple = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: `Failed to create products: ${error}` });
   }
-}
+};
 
 // Update a product
 const updateProduct = async (req, res) => {
@@ -53,7 +53,7 @@ const updateProduct = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: "Failed to update product" });
   }
-}
+};
 
 // Delete a product
 const deleteProduct = async (req, res) => {
@@ -66,7 +66,21 @@ const deleteProduct = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: "Failed to delete product" });
   }
-}
+};
+
+const queryProducts = async (req, res) => {
+  try {
+    const filters = req.query;
+    console.log('Received filters:', filters);
+    
+    const products = await Product.queryProducts(filters);
+    res.json(products);
+  } catch (error) {
+    console.error('Error querying products:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
 
 module.exports = {
   getAllProducts,
@@ -75,4 +89,5 @@ module.exports = {
   createMultiple,
   updateProduct,
   deleteProduct,
-}
+  queryProducts
+};

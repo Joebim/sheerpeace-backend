@@ -1,5 +1,6 @@
 const { db } = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
+const dayjs = require('dayjs');
 
 const Product = {
   // Get all products with populated details
@@ -77,6 +78,23 @@ const Product = {
   // Delete product
   delete: async (id) => {
     return await db('products').where({ id }).del();
+  },
+
+  queryProducts: async (filters) => {
+    let query = db('products');
+  
+    if (filters.isFeatured) query.where('is_featured', true);
+    if (filters.trending) query.orderBy('views', 'desc');
+    if (filters.isNew) query.where('created_at', '>=', dayjs().subtract(7, 'days').toISOString());
+    if (filters.topSelling) query.orderBy('number_sold', 'desc');
+    if (filters.topChoice) query.orderByRaw('(likes + number_sold + average_rating) DESC');
+    if (filters.category) query.whereRaw('? = ANY(category_ids)', [filters.category]);
+    if (filters.subcategory) query.whereRaw('? = ANY(subcategory_ids)', [filters.subcategory]);
+    if (filters.discount) query.where('is_discounted', true);
+  
+    console.log('Generated SQL:', query.toString());
+  
+    return await query.select('*');
   }
 };
 
