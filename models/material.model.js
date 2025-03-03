@@ -1,20 +1,45 @@
-const { db } = require('../config/db');
+const { db } = require("../config/db");
+const { v4: uuidv4 } = require("uuid");
 
 const Material = {
   // Get all materials
-  getAll: () => db('materials').select('*'),
+  getAll: async () => {
+    const materials = await db("materials").select("*");
+    const materialsWithUpload = await Promise.all(
+      materials.map(async (material) => {
+        const materialImage = material.material_image_id
+          ? await db("uploads")
+              .where({ id: material.material_image_id })
+              .first()
+          : null;
+
+        return {
+          ...material,
+          material_image: materialImage ? materialImage.file : null,
+        };
+      })
+    );
+    return materialsWithUpload;
+  },
 
   // Get a material by ID
-  getById: (id) => db('materials').where({ id }).first(),
+  getById: async (id) => db("materials").where({ id }).first(),
 
   // Create a new material
-  create: (data) => db('materials').insert(data).returning('*'),
+  create: async (data) =>
+    db("materials")
+      .insert({
+        id: uuidv4(),
+        ...data,
+      })
+      .returning("*"),
 
   // Update a material
-  update: (id, data) => db('materials').where({ id }).update(data).returning('*'),
+  update: async (id, data) =>
+    db("materials").where({ id }).update(data).returning("*"),
 
   // Delete a material
-  delete: (id) => db('materials').where({ id }).del(),
+  delete: async (id) => db("materials").where({ id }).del(),
 };
 
 module.exports = Material;

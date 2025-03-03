@@ -1,8 +1,8 @@
-const Message = require('../models/message.model');
+const Message = require("../models/message.model");
 
 // Get all messages for a user
 exports.getAllMessages = async (req, res) => {
-  const { userId } = req.params;
+  const userId = req.user.id;
   try {
     const messages = await Message.getByUserId(userId);
     res.json(messages);
@@ -13,9 +13,14 @@ exports.getAllMessages = async (req, res) => {
 
 // Create a new message
 exports.createMessage = async (req, res) => {
+  const userId = req.user.id;
   const data = req.body;
+  console.log(userId, data);
   try {
-    const newMessage = await Message.create(data);
+    const newMessage = await Message.create({
+      user_id: userId,
+      ...data,
+    });
     res.status(201).json(newMessage[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -30,7 +35,7 @@ exports.markMessageAsRead = async (req, res) => {
     if (updatedMessage.length > 0) {
       res.json(updatedMessage[0]);
     } else {
-      res.status(404).json({ error: 'Message not found' });
+      res.status(404).json({ error: "Message not found" });
     }
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -43,9 +48,9 @@ exports.deleteMessage = async (req, res) => {
   try {
     const deletedCount = await Message.delete(id);
     if (deletedCount > 0) {
-      res.json({ message: 'Message deleted successfully' });
+      res.json({ message: "Message deleted successfully" });
     } else {
-      res.status(404).json({ error: 'Message not found' });
+      res.status(404).json({ error: "Message not found" });
     }
   } catch (err) {
     res.status(500).json({ error: err.message });
