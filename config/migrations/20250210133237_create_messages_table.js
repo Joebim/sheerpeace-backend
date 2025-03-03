@@ -1,6 +1,6 @@
 exports.up = function (knex) {
     return knex.schema.createTable('messages', (table) => {
-      table.increments('id').primary(); // Unique identifier
+      table.uuid('id').primary(); // Unique identifier
       table
         .uuid('user_id')
         .unsigned()

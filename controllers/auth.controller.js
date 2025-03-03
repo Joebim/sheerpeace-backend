@@ -8,7 +8,7 @@ const getUserByEmail = async (email) => {
 
 const register = async (req, res) => {
     try {
-        const { name, email, password, user_type } = req.body;
+        const { first_name, last_name, email, password, user_type } = req.body;
 
         // Check if user exists
         const existingUser = await getUserByEmail(email);
@@ -23,7 +23,8 @@ const register = async (req, res) => {
         // Insert new user into the database
         const [newUser] = await db("users")
             .insert({
-                name,
+                first_name,
+                last_name,
                 email,
                 password: hashedPassword,
                 user_type: role,

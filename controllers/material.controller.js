@@ -25,8 +25,8 @@ exports.getMaterialById = async (req, res) => {
 // Create a new material
 exports.createMaterial = async (req, res) => {
   try {
-    const { name, description } = req.body;
-    const [material] = await Material.create({ name, description });
+    const { name, description, material_image_id } = req.body;
+    const [material] = await Material.create({ name, description, material_image_id });
     res.status(201).json(material);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -37,8 +37,8 @@ exports.createMaterial = async (req, res) => {
 exports.updateMaterial = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description } = req.body;
-    const [material] = await Material.update(id, { name, description });
+    const { name, description, material_image_id } = req.body;
+    const [material] = await Material.update(id, { name, description, material_image_id });
     if (!material) return res.status(404).json({ error: 'Material not found' });
     res.json(material);
   } catch (err) {
