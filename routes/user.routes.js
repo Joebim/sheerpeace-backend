@@ -4,6 +4,7 @@ const {
   adminMiddleware,
 } = require("../middleware/auth.middleware");
 const {
+  getAllUsers,
   getLoggedInUser,
   getUser,
   updateUserDetails,
@@ -12,6 +13,8 @@ const {
 const router = express.Router();
 
 // Protected route: Get logged-in user details
+router.get("/", authMiddleware, adminMiddleware, getAllUsers);
+
 router.get("/me", authMiddleware, getLoggedInUser);
 
 // Protected route: Get a user by ID
