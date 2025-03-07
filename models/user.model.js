@@ -1,5 +1,8 @@
 const { db } = require("../config/db");
 
+
+const getAll = () => db('users').select('*')
+
 // Get user by email
 const getUserByEmail = async (email) => {
   return db("users").where({ email }).first();
@@ -72,6 +75,7 @@ const deleteUser = async (id) => {
 };
 
 module.exports = {
+  getAll,
   getUserByEmail,
   getUserById,
   updateUser,
