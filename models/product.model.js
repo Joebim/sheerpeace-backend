@@ -34,7 +34,7 @@ const Product = {
 
   // Get product by ID with populated details
   getById: async (id) => {
-    const product = await db('products').where({ id }).first();
+    const product = await db('products').where('id', id).first();
     if (!product) return null;
     
     const brand = await db('brands').where({ id: product.brand_id }).first();
@@ -42,7 +42,7 @@ const Product = {
     const subcategories = await db('subcategories').whereIn('id', product.subcategory_ids).select('*');
     const sizes = await db('sizes').whereIn('id', product.size_ids).select('*');
     const colors = await db('colors').whereIn('id', product.color_ids).select('*');
-    const variants = await db('variant_ids').whereIn('id', product.variant_ids).select('*');
+    const variants = await db('product_variants').whereIn('id', product.variant_ids).select('*');
     const images = await db('uploads').whereIn('id', product.images).select('*');
     
     return {
