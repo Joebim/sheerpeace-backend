@@ -20,7 +20,7 @@ exports.addProductVariant = async (req, res) => {
 
 exports.updateVariant = async (req, res) => {
   try {
-    const variant = await ProductVariant.update(req.params.variant_id, req.body);
+    const variant = await ProductVariant.update(req.params.id, req.body);
     if (!variant) return res.status(404).json({ error: 'Variant not found' });
     res.json({ message: 'Variant updated successfully', variant });
   } catch (err) {
@@ -30,7 +30,7 @@ exports.updateVariant = async (req, res) => {
 
 exports.deleteVariant = async (req, res) => {
   try {
-    const deletedVariant = await ProductVariant.delete(req.params.variant_id);
+    const deletedVariant = await ProductVariant.delete(req.params.id);
     if (!deletedVariant) return res.status(404).json({ error: 'Variant not found' });
     res.json({ message: 'Variant deleted successfully' });
   } catch (err) {

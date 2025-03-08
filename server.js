@@ -22,6 +22,7 @@ const shippingAddressRouter = require("./routes/shippingAddress.routes.js");
 const orderRouter = require("./routes/order.routes.js");
 const messageRouter = require("./routes/message.routes.js");
 const featuredOfferingRouter = require("./routes/featuredOffering.routes.js");
+const productVariantRouter = require("./routes/productVariant.routes.js");
 
 const app = express();
 app.use(express.json());
@@ -81,6 +82,7 @@ app.use("/api/shipping-addresses", shippingAddressRouter);
 app.use("/api/orders", orderRouter);
 app.use("/api/messages", messageRouter);
 app.use("/api/featured", featuredOfferingRouter);
+app.use("/api/product_variants", productVariantRouter);
 
 app.listen(process.env.PORT_SERVER, () => {
   console.log(`running on port ${process.env.PORT_SERVER}`);
