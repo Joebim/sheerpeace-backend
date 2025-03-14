@@ -30,7 +30,8 @@ exports.up = function (knex) {
     table.boolean("is_discounted").defaultTo(false);
     // Product images
     table.specificType("images", "UUID[]"); // Array of image URLs
-
+    table.uuid("specification_id").references("id").inTable("product_specifications").onDelete("CASCADE");
+    table.uuid("description_id").references("id").inTable("product_descriptions").onDelete("CASCADE");
     // Timestamps
     table.timestamp("created_at").defaultTo(knex.fn.now());
     table.timestamp("updated_at").defaultTo(knex.fn.now());
