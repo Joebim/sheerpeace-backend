@@ -16,7 +16,7 @@ exports.up = function (knex) {
       .onDelete("CASCADE"); // References the uploads table
     table.integer("stock").defaultTo(0);
     table.decimal("price", 10, 2).notNullable();
-
+    table.specificType("selected_materials", "UUID[]").defaultTo("{}"); // Selected materials
     table.timestamp("created_at").defaultTo(knex.fn.now());
     table.timestamp("updated_at").defaultTo(knex.fn.now());
   });

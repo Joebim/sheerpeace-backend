@@ -16,7 +16,7 @@ exports.up = function (knex) {
       .onDelete("CASCADE"); // Reference to the product
     table.integer("quantity").notNullable().defaultTo(1); // Quantity of the product
     table.specificType("selected_sizes", "UUID[]").defaultTo("{}"); // Selected sizes
-    table.specificType("selected_materials", "UUID[]").defaultTo("{}"); // Selected materials
+    table.specificType("selected_variants", "UUID[]").defaultTo("{}"); // Selected materials
     table.specificType("selected_colors", "UUID[]").defaultTo("{}"); // Selected colors
     table.timestamp("created_at").defaultTo(knex.fn.now()); // Timestamp for creation
   });

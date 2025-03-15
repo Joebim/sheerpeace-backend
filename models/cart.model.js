@@ -1,6 +1,26 @@
 const { db } = require("../config/db");
 const { v4: uuidv4 } = require("uuid");
 
+function ensureArray(value) {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch (err) {
+      console.error("Failed to parse JSON:", err);
+      return [];
+    }
+  }
+  return [];
+}
+
+function formatArrayForPostgres(array) {
+  if (!Array.isArray(array)) return "{}"; // Return an empty array literal if the input is invalid
+  return `{${array.map((id) => `"${id}"`).join(",")}}`; // Format as PostgreSQL array literal
+}
+
 const Cart = {
   // Get cart by user ID
   getCart: async (userId) => {
@@ -22,50 +42,101 @@ const Cart = {
   },
 
   getItems: async (cartId) => {
+    // Fetch cart items for the given cart_id
     const items = await db("cart_items").where({ cart_id: cartId }).select("*");
-
-    // Populate selected_sizes, selected_materials, and selected_colors
+  
+    if (items.length === 0) return [];
+  
+    // Extract product IDs for batch query
+    const productIds = items.map((item) => item.product_id);
+  
+    // Fetch product details in a single query
+    const products = await db("products").whereIn("id", productIds).select("*");
+  
+    // Extract all image IDs from products
+    const imageIds = products
+      .flatMap((product) => product.images || [])
+      .filter((id) => id); // Remove null/undefined
+  
+    // Fetch images in a single batch query
+    const uploadedImages = imageIds.length
+      ? await db("uploads").whereIn("id", imageIds).select("*")
+      : [];
+  
+    // Create a map of image ID → file URL
+    const imageMap = new Map(uploadedImages.map((img) => [img.id, img.file]));
+  
+    // Map products and attach images
+    const productMap = new Map(
+      products.map((product) => [
+        product.id,
+        {
+          ...product,
+          images: (product.images || []).map((imgId) => imageMap.get(imgId) || null),
+        },
+      ])
+    );
+  
+    // Populate cart items with product details and selected options
     const populatedItems = await Promise.all(
       items.map(async (item) => {
-        // Ensure selected options are parsed into arrays
-        const sizeIds = Array.isArray(item.selected_sizes)
-          ? item.selected_sizes
-          : JSON.parse(item.selected_sizes || "[]");
-
-        const materialIds = Array.isArray(item.selected_materials)
-          ? item.selected_materials
-          : JSON.parse(item.selected_materials || "[]");
-
-        const colorIds = Array.isArray(item.selected_colors)
-          ? item.selected_colors
-          : JSON.parse(item.selected_colors || "[]");
-
-        // Fetch selected sizes
-        const selected_sizes = sizeIds.length
-          ? await db("sizes").whereIn("id", sizeIds).select("*")
-          : [];
-
-        // Fetch selected materials
-        const selected_materials = materialIds.length
-          ? await db("materials").whereIn("id", materialIds).select("*")
-          : [];
-
-        // Fetch selected colors
-        const selected_colors = colorIds.length
-          ? await db("colors").whereIn("id", colorIds).select("*")
-          : [];
-
+        const product = productMap.get(item.product_id) || null;
+  
+        // Ensure selected attributes are arrays
+        const selected_sizes = ensureArray(item.selected_sizes);
+        const selected_variants = ensureArray(item.selected_variants);
+        const selected_colors = ensureArray(item.selected_colors);
+  
+        // Fetch selected sizes, variants, and colors in batch queries
+        const [sizes, variants, colors] = await Promise.all([
+          selected_sizes.length ? db("sizes").whereIn("id", selected_sizes).select("*") : [],
+          selected_variants.length ? db("product_variants").whereIn("id", selected_variants).select("*") : [],
+          selected_colors.length ? db("colors").whereIn("id", selected_colors).select("*") : [],
+        ]);
+  
         return {
           ...item,
-          selected_sizes,
-          selected_materials,
-          selected_colors,
+          product, // Attach product details with images
+          selected_sizes: sizes,
+          selected_variants: variants,
+          selected_colors: colors,
         };
       })
     );
-    
+  
     return populatedItems;
   },
+
+  // Get a cart item by its ID
+getItemById: async (cartItemId) => {
+  // Fetch the cart item
+  const item = await db("cart_items").where({ id: cartItemId }).first();
+  if (!item) return null;
+
+  // Fetch product details
+  const product = await db("products").where({ id: item.product_id }).first();
+
+  // Fetch selected attributes
+  const selected_sizes = ensureArray(item.selected_sizes);
+  const selected_variants = ensureArray(item.selected_variants);
+  const selected_colors = ensureArray(item.selected_colors);
+
+  // Fetch related attributes in batch queries
+  const [sizes, variants, colors] = await Promise.all([
+    selected_sizes.length ? db("sizes").whereIn("id", selected_sizes).select("*") : [],
+    selected_variants.length ? db("product_variants").whereIn("id", selected_variants).select("*") : [],
+    selected_colors.length ? db("colors").whereIn("id", selected_colors).select("*") : [],
+  ]);
+
+  return {
+    ...item,
+    product,
+    selected_sizes: sizes,
+    selected_variants: variants,
+    selected_colors: colors,
+  };
+},
+
 
   // Create a new cart
   create: (data) =>
@@ -122,6 +193,26 @@ const Cart = {
         total_price: totalPrice?.total || 0.0,
       })
       .returning("*");
+  },
+
+  updateItem: async (cartItemId, data) => {
+    // Format arrays for PostgreSQL
+    if (data.selected_sizes) {
+      data.selected_sizes = formatArrayForPostgres(data.selected_sizes);
+    }
+    if (data.selected_variants) {
+      data.selected_variants = formatArrayForPostgres(data.selected_variants);
+    }
+    if (data.selected_colors) {
+      data.selected_colors = formatArrayForPostgres(data.selected_colors);
+    }
+  
+    const updatedItem = await db("cart_items")
+      .where({ id: cartItemId })
+      .update(data)
+      .returning("*");
+  
+    return updatedItem.length ? updatedItem[0] : null;
   },
 };
 
