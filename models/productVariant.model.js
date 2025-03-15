@@ -3,13 +3,7 @@ const { db } = require("../config/db");
 const ProductVariant = {
   getAllByProductId: async (productId) => {
     const variants = await db("product_variants")
-      .select(
-        "product_variants.*",
-        "colors.name as color",
-        "colors.hex as colorHex",
-        "uploads.file as image"
-      )
-      .leftJoin("colors", "product_variants.color", "colors.id")
+      .select("product_variants.*", "uploads.file as image")
       .leftJoin("uploads", "product_variants.image_id", "uploads.id")
       .where("product_variants.product_id", productId);
 
@@ -19,18 +13,28 @@ const ProductVariant = {
 
     return Promise.all(
       variants.map(async (variant) => {
+        // Fetch full color object (if color ID exists)
         const color = variant.color
           ? await db("colors").where({ id: variant.color }).first()
           : null;
+
+        // Fetch full image object (if image_id exists)
         const image = variant.image_id
           ? await db("uploads").where({ id: variant.image_id }).first()
           : null;
 
+        // Fetch all materials linked to this variant
+        const materials = variant.material_ids
+          ? await db("materials")
+              .whereIn("id", variant.material_ids)
+              .select("*")
+          : [];
+
         return {
           ...variant,
-          color: color ? color.name : null,
-          colorHex: color ? color.hex : null,
+          color, // Now contains full color object
           image: image ? image.file : null,
+          materials,
         };
       })
     );

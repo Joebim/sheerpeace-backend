@@ -23,6 +23,10 @@ const orderRouter = require("./routes/order.routes.js");
 const messageRouter = require("./routes/message.routes.js");
 const featuredOfferingRouter = require("./routes/featuredOffering.routes.js");
 const productVariantRouter = require("./routes/productVariant.routes.js");
+const questionRouter = require("./routes/question.routes.js");
+const answerRouter = require("./routes/answer.routes.js");
+const productDescriptionRouter = require("./routes/productDescription.routes.js");
+const productSpecificationRouter = require("./routes/productSpecification.routes.js");
 
 const app = express();
 app.use(express.json());
@@ -83,6 +87,10 @@ app.use("/api/orders", orderRouter);
 app.use("/api/messages", messageRouter);
 app.use("/api/featured", featuredOfferingRouter);
 app.use("/api/product_variants", productVariantRouter);
+app.use("/api/product_questions", questionRouter);
+app.use("/api/product_answers", answerRouter);
+app.use("/api/product_descriptions", productDescriptionRouter);
+app.use("/api/product_specifications", productSpecificationRouter);
 
 app.listen(process.env.PORT_SERVER, () => {
   console.log(`running on port ${process.env.PORT_SERVER}`);
