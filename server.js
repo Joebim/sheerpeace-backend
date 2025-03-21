@@ -27,6 +27,7 @@ const questionRouter = require("./routes/question.routes.js");
 const answerRouter = require("./routes/answer.routes.js");
 const productDescriptionRouter = require("./routes/productDescription.routes.js");
 const productSpecificationRouter = require("./routes/productSpecification.routes.js");
+const searchRouter = require("./routes/search.routes.js");
 
 const app = express();
 app.use(express.json());
@@ -91,6 +92,7 @@ app.use("/api/product_questions", questionRouter);
 app.use("/api/product_answers", answerRouter);
 app.use("/api/product_descriptions", productDescriptionRouter);
 app.use("/api/product_specifications", productSpecificationRouter);
+app.use("/api/search", searchRouter);
 
 app.listen(process.env.PORT_SERVER, () => {
   console.log(`running on port ${process.env.PORT_SERVER}`);

@@ -2,7 +2,6 @@ const Wishlist = require('../models/wishlist.model');
 
 exports.getUserWishlist = async (req, res) => {
   try {
-    const userId = req.user.id
     const wishlist = await Wishlist.getUserWishlist(req.user.id);
     res.json(wishlist);
   } catch (err) {

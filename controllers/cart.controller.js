@@ -1,8 +1,15 @@
 const Cart = require("../models/cart.model");
+const { v4: uuidv4 } = require("uuid");
+const { db } = require("../config/db");
 
 function extractIds(array) {
   if (!Array.isArray(array)) return [];
   return array.map((item) => item.id).filter((id) => id); // Extract IDs and filter out undefined/null
+}
+
+function formatArrayForPostgres(array) {
+  if (!Array.isArray(array)) return "{}"; // Return an empty array literal if the input is invalid
+  return `{${array.map((id) => `"${id}"`).join(",")}}`; // Format as PostgreSQL array literal
 }
 
 function ensureArray(value) {
@@ -19,7 +26,6 @@ function ensureArray(value) {
   }
   return [];
 }
-
 
 // Get cart by user ID
 exports.getCart = async (req, res) => {
@@ -79,33 +85,81 @@ exports.addItem = async (req, res) => {
   }
 };
 
-// Update item quantity
+exports.addItems = async (req, res) => {
+  try {
+    const { items } = req.body;
+    const userId = req.user.id;
+
+    let cart = await Cart.getCart(userId);
+
+    if (!cart.id || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: "Invalid cartId or items array" });
+    }
+
+    const addedItems = await Cart.addItems(items, cart.id);
+    await Cart.updateCartTotals(cart.id);
+    return res.status(201).json({ success: true, items: addedItems });
+  } catch (error) {
+    console.error("Error adding multiple items:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+// Update item quantity by product ID
 exports.updateItemQuantity = async (req, res) => {
   try {
-    const { cartItemId } = req.params;
+    const { productId } = req.params;
     const { quantity } = req.body;
+    const userId = req.user.id;
 
-    const [item] = await Cart.updateItemQuantity(cartItemId, quantity);
-    if (!item) return res.status(404).json({ error: "Item not found" });
+    // Fetch the user's cart
+    const cart = await Cart.getCart(userId);
+    if (!cart) return res.status(404).json({ error: "Cart not found" });
 
-    await Cart.updateCartTotals(item.cart_id); // Update cart totals after quantity change
+    // Find the cart item by product ID
+    const cartItem = await db("cart_items")
+      .where({ cart_id: cart.id, product_id: productId })
+      .first();
 
-    res.json(item);
+    if (!cartItem) {
+      return res.status(404).json({ error: "Item not found in cart" });
+    }
+
+    // Update the item quantity
+    const [updatedItem] = await Cart.updateItemQuantity(cartItem.id, quantity);
+
+    // Update cart totals
+    await Cart.updateCartTotals(cart.id);
+
+    res.json(updatedItem);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// Remove item from cart
+// Remove item from cart by product ID
 exports.removeItem = async (req, res) => {
   try {
-    const { cartItemId } = req.params;
-    const cartItem = await Cart.getItemById(cartItemId);
+    const { productId } = req.params;
+    const userId = req.user.id;
 
-    if (!cartItem) return res.status(404).json({ error: "Item not found" });
+    // Fetch the user's cart
+    const cart = await Cart.getCart(userId);
+    if (!cart) return res.status(404).json({ error: "Cart not found" });
 
-    await Cart.removeItem(cartItemId);
-    await Cart.updateCartTotals(cartItem.cart_id); // Update cart totals after removing an item
+    // Find the cart item by product ID
+    const cartItem = await db("cart_items")
+      .where({ cart_id: cart.id, product_id: productId })
+      .first();
+
+    if (!cartItem) {
+      return res.status(404).json({ error: "Item not found in cart" });
+    }
+
+    // Remove the item from the cart
+    await Cart.removeItem(cartItem.id);
+
+    // Update cart totals
+    await Cart.updateCartTotals(cart.id);
 
     res.json({ message: "Item removed from cart" });
   } catch (err) {
@@ -116,103 +170,55 @@ exports.removeItem = async (req, res) => {
 exports.synchronizeCart = async (req, res) => {
   try {
     const userId = req.user.id;
-    const incomingCart = req.body.cart;
+    const mergedCart = req.body.cart;
 
-    if (!incomingCart || !Array.isArray(incomingCart.items)) {
+    if (!mergedCart || !Array.isArray(mergedCart.items)) {
       return res.status(400).json({ error: "Invalid cart data" });
     }
 
-    // Fetch the server cart for the user
+    // Fetch or create the server cart
     let serverCart = await Cart.getCart(userId);
 
     if (!serverCart) {
-      // If no server cart exists, create a new one using the client cart data
+      // If no server cart exists, create a new one
       const [newCart] = await Cart.create({
-        id: incomingCart.id || uuidv4(), // Use the client cart ID if provided
+        id: mergedCart.id || uuidv4(),
         user_id: userId,
-        total_items: incomingCart.total_items || 0,
-        total_price: incomingCart.total_price || 0.0,
-        created_at: incomingCart.created_at || new Date().toISOString(),
+        total_items: mergedCart.total_items || 0,
+        total_price: mergedCart.total_price || 0.0,
+        created_at: mergedCart.created_at || new Date().toISOString(),
       });
       serverCart = newCart;
-
-      // Add items from the client cart to the new server cart
-      for (const item of incomingCart.items) {
-        await Cart.addItem({
-          id: item.id || uuidv4(), // Use the client item ID if provided
-          cart_id: serverCart.id,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          selected_sizes: JSON.stringify(extractIds(item.selected_sizes)), // Extract IDs
-          selected_variants: JSON.stringify(extractIds(item.selected_variants)), // Extract IDs
-          selected_colors: JSON.stringify(extractIds(item.selected_colors)), // Extract IDs
-          created_at: item.created_at || new Date().toISOString(),
-        });
-      }
-    } else {
-      // Reconcile the client cart with the server cart
-      const serverItems = await Cart.getItems(serverCart.id);
-      const serverItemsMap = new Map(
-        serverItems.map((item) => [item.product_id, item])
-      );
-
-      const reconciledItems = [...serverItems];
-
-      for (const clientItem of incomingCart.items) {
-        const serverItem = serverItemsMap.get(clientItem.product_id);
-
-        if (serverItem) {
-          // If the item exists in both carts, update the quantity to the maximum value
-          serverItem.quantity = Math.max(serverItem.quantity, clientItem.quantity);
-
-          // Merge selected sizes, variants, and colors (extract IDs)
-          const serverSizes = extractIds(ensureArray(serverItem.selected_sizes));
-          const serverVariants = extractIds(ensureArray(serverItem.selected_variants));
-          const serverColors = extractIds(ensureArray(serverItem.selected_colors));
-
-          const clientSizes = extractIds(ensureArray(clientItem.selected_sizes));
-          const clientVariants = extractIds(ensureArray(clientItem.selected_variants));
-          const clientColors = extractIds(ensureArray(clientItem.selected_colors));
-
-          serverItem.selected_sizes = [
-            ...new Set([...serverSizes, ...clientSizes]),
-          ];
-          serverItem.selected_variants = [
-            ...new Set([...serverVariants, ...clientVariants]),
-          ];
-          serverItem.selected_colors = [
-            ...new Set([...serverColors, ...clientColors]),
-          ];
-
-          // Update the item in the database
-          await Cart.updateItem(serverItem.id, {
-            quantity: serverItem.quantity,
-            selected_sizes: JSON.stringify(serverItem.selected_sizes), // Store as JSON string
-            selected_variants: JSON.stringify(serverItem.selected_variants), // Store as JSON string
-            selected_colors: JSON.stringify(serverItem.selected_colors), // Store as JSON string
-          });
-        } else {
-          // If the item exists only in the client cart, add it to the server cart
-          const [newItem] = await Cart.addItem({
-            id: clientItem.id || uuidv4(), // Use the client item ID if provided
-            cart_id: serverCart.id,
-            product_id: clientItem.product_id,
-            quantity: clientItem.quantity,
-            selected_sizes: JSON.stringify(extractIds(clientItem.selected_sizes)), // Extract IDs
-            selected_variants: JSON.stringify(extractIds(clientItem.selected_variants)), // Extract IDs
-            selected_colors: JSON.stringify(extractIds(clientItem.selected_colors)), // Extract IDs
-            created_at: clientItem.created_at || new Date().toISOString(),
-          });
-
-          reconciledItems.push(newItem);
-        }
-      }
-
-      // Update the server cart with the new totals
-      await Cart.updateCartTotals(serverCart.id);
     }
 
-    // Fetch the updated server cart with populated items
+    // Ensure the server cart has an ID
+    if (!serverCart.id) {
+      return res
+        .status(500)
+        .json({ error: "Failed to create or retrieve the server cart" });
+    }
+
+    // Remove existing cart items before adding new ones
+    await Cart.removeItems(serverCart.id);
+
+    // Add merged cart items to the server
+    const formattedItems = mergedCart.items.map((item) => ({
+      id: item.id || uuidv4(),
+      cart_id: serverCart.id,
+      product_id: item.product_id,
+      quantity: item.quantity,
+      selected_sizes: formatArrayForPostgres(item.selected_sizes.map(size => size.id) || []),
+      selected_variants: formatArrayForPostgres(item.selected_variants.map(variant => variant.id) || []),
+      selected_colors: formatArrayForPostgres(item.selected_colors.map(color => color.id) || []),
+      created_at: item.created_at || new Date().toISOString(),
+    }));
+
+    await Cart.addItems(formattedItems, serverCart.id);
+
+    // Update cart totals
+    await Cart.updateCartTotals(serverCart.id);
+
+    // Fetch the updated server cart
     const updatedCart = await Cart.getCart(userId);
     updatedCart.items = await Cart.getItems(serverCart.id);
 

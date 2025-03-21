@@ -19,7 +19,7 @@ exports.up = function (knex) {
     table.integer("likes").defaultTo(0);
     table.boolean("is_featured").defaultTo(false);
     table.integer("number_sold").defaultTo(0);
-    table.decimal("average_rating", 3, 2).defaultTo(0); // e.g., 4.5
+    table.decimal("average_rating", 3, 2).defaultTo(0);
     table.integer("total_reviews").defaultTo(0);
 
     // Discount-related fields

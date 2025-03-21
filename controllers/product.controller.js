@@ -2,10 +2,16 @@ const Product = require("../models/product.model");
 
 const getAllProducts = async (req, res) => {
   try {
-    const products = await Product.getAll();
-    res.status(200).json(products);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const result = await Product.getAll(page, limit);
+
+    res.status(200).json(result);
   } catch (error) {
-    res.status(500).json({ error: `Failed to fetch products ${error}` });
+    res
+      .status(500)
+      .json({ error: `Failed to fetch products: ${error.message}` });
   }
 };
 
@@ -71,16 +77,76 @@ const deleteProduct = async (req, res) => {
 const queryProducts = async (req, res) => {
   try {
     const filters = req.query;
-    console.log('Received filters:', filters);
-    
+    console.log("Received filters:", filters);
+
     const products = await Product.queryProducts(filters);
     res.json(products);
   } catch (error) {
-    console.error('Error querying products:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error("Error querying products:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
+const updateViewCount = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedProduct = await Product.updateViewCount(id);
+
+    if (!updatedProduct) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    res.status(200).json(updatedProduct);
+  } catch (error) {
+    console.error("Failed to update view count:", error);
+    res.status(500).json({ error: "Failed to update product views" });
+  }
+};
+
+const updateLikeCount = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { increment } = req.body; // Pass true to increase, false to decrease
+
+    const updatedProduct = await Product.updateLikeCount(id, increment);
+
+    if (!updatedProduct) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    res.status(200).json(updatedProduct);
+  } catch (error) {
+    console.error("Failed to update like count:", error);
+    res.status(500).json({ error: "Failed to update product likes" });
+  }
+};
+
+const toggleFeatured = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedProduct = await Product.toggleFeatured(id);
+
+    if (!updatedProduct) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    res.status(200).json(updatedProduct);
+  } catch (error) {
+    console.error("Failed to toggle isFeatured:", error);
+    res.status(500).json({ error: "Failed to toggle product featured status" });
+  }
+};
+
+const searchProducts = async (req, res) => {
+  try {
+    const filters = req.query;
+    const results = await Product.searchProducts(filters);
+    res.json({ success: true, data: results });
+  } catch (error) {
+    console.error("Error searching products:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
 
 module.exports = {
   getAllProducts,
@@ -89,5 +155,9 @@ module.exports = {
   createMultiple,
   updateProduct,
   deleteProduct,
-  queryProducts
+  queryProducts,
+  updateViewCount,
+  updateLikeCount,
+  toggleFeatured,
+  searchProducts,
 };
