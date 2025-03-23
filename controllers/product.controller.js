@@ -144,7 +144,9 @@ const searchProducts = async (req, res) => {
     res.json({ success: true, data: results });
   } catch (error) {
     console.error("Error searching products:", error);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
+    res
+      .status(500)
+      .json({ success: false, message: `Internal Server Error: ${error}` });
   }
 };
 
