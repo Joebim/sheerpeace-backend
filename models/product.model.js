@@ -456,7 +456,6 @@ const Product = {
       query.whereILike("description", `%${filters.desc}%`);
     }
 
-    // 🔹 Category & Subcategory Filter (Using Names)
     if (filters.category) {
       const category = await db("categories")
         .whereILike("name", filters.category)
